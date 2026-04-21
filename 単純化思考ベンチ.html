@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>単純化思考ベンチ — Neumann Mode</title>
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --card: #ffffff;
+    --ink: #1a1f36;
+    --sub: #5a6479;
+    --line: #e4e7ef;
+    --brand: #2750ff;
+    --brand-soft: #edf1ff;
+    --accent: #00c08b;
+    --warn: #ff7a1a;
+    --danger: #e13a4a;
+    --shadow: 0 1px 2px rgba(26,31,54,.04), 0 8px 24px rgba(26,31,54,.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+  header {
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { margin: 0; font-size: 18px; font-weight: 700; }
+  header .sub { color: var(--sub); font-size: 12px; margin-top: 2px; }
+  header .stats { font-size: 13px; color: var(--sub); }
+  header .stats b { color: var(--brand); font-size: 16px; margin: 0 2px; }
+
+  .container {
+    max-width: 960px;
+    margin: 24px auto;
+    padding: 0 24px 80px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--line);
+  }
+  .card.active { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-soft), var(--shadow); }
+  .card.done { opacity: 0.85; }
+  .card.done .step-num { background: var(--accent); }
+
+  .step-head {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+  .step-num {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    background: var(--brand);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step-title { font-size: 17px; font-weight: 700; }
+  .step-hint { color: var(--sub); font-size: 13px; margin-top: 2px; }
+  .quote {
+    background: var(--brand-soft);
+    border-left: 3px solid var(--brand);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+
+  textarea, input[type="text"] {
+    width: 100%;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    background: #fafbfe;
+    color: var(--ink);
+  }
+  textarea:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: var(--brand);
+    background: #fff;
+  }
+  label { font-size: 12px; color: var(--sub); font-weight: 600; display: block; margin-bottom: 4px; margin-top: 10px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  .chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #f0f2f8;
+    font-size: 12px;
+    color: var(--ink);
+  }
+  .chip.essential { background: #e8fff7; color: #007a57; }
+  .chip.extra { background: #ffefe8; color: #a84500; text-decoration: line-through; text-decoration-color: #d97a4a; }
+  .chip button { border: none; background: transparent; cursor: pointer; color: var(--sub); padding: 0; font-size: 14px; }
+
+  button.primary {
+    background: var(--brand);
+    color: #fff;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button.primary:hover { background: #1d3fe0; }
+  button.ghost {
+    background: transparent;
+    border: 1px solid var(--line);
+    padding: 8px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--sub);
+    font-size: 13px;
+  }
+  button.ghost:hover { border-color: var(--brand); color: var(--brand); }
+  .action-row { display: flex; gap: 8px; margin-top: 14px; align-items: center; justify-content: flex-end; }
+
+  .sort-list { list-style: none; padding: 0; margin: 0; }
+  .sort-list li {
+    background: #fafbfe;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: move;
+  }
+  .sort-list li .rank { font-weight: 700; color: var(--brand); width: 20px; }
+  .sort-list li .handle { color: var(--sub); font-size: 16px; margin-left: auto; }
+
+  .structure-box {
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 16px;
+    background: #fafbfe;
+    min-height: 100px;
+  }
+  .rel-row { display: grid; grid-template-columns: 1fr auto 1fr auto; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .rel-row select, .rel-row input {
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 13px;
+    background: #fff;
+  }
+  .rel-row button { background: transparent; border: none; color: var(--danger); cursor: pointer; font-size: 16px; }
+
+  .round-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    background: var(--brand-soft);
+    color: var(--brand);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .summary-card {
+    background: linear-gradient(135deg, #2750ff 0%, #5a7bff 100%);
+    color: #fff;
+    border: none;
+  }
+  .summary-card h2 { margin: 0 0 8px; font-size: 16px; }
+  .summary-card .sentence {
+    font-size: 18px;
+    line-height: 1.5;
+    font-weight: 600;
+    padding: 12px;
+    background: rgba(255,255,255,.1);
+    border-radius: 8px;
+    min-height: 60px;
+  }
+
+  .history {
+    margin-top: 24px;
+  }
+  .history h3 { font-size: 14px; color: var(--sub); margin: 0 0 8px; text-transform: uppercase; letter-spacing: .5px; }
+  .history-item {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+  }
+  .history-item:hover { border-color: var(--brand); }
+  .history-item .hist-problem { font-size: 14px; font-weight: 600; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .history-item .hist-meta { font-size: 12px; color: var(--sub); }
+
+  .principle-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 6px;
+    background: var(--brand-soft);
+    color: var(--brand);
+    border-radius: 4px;
+    font-weight: 600;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+
+  .intro {
+    background: var(--card);
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    border: 1px solid var(--line);
+    box-shadow: var(--shadow);
+  }
+  .intro p { color: var(--sub); font-size: 13px; margin: 4px 0; }
+  .intro b { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>単純化思考ベンチ <span style="font-size:11px;color:var(--sub);font-weight:normal">/ Neumann Mode</span></h1>
+    <div class="sub">フォン・ノイマンの7原則で、目の前の問題を「判断できる形」まで削る</div>
+  </div>
+  <div class="stats">
+    習慣回数 <b id="total-count">0</b> 回 / 今月 <b id="month-count">0</b> 回
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="intro">
+    <p><b>このベンチの使い方</b></p>
+    <p>① 上から順にカードを埋める　② 迷ったら<b>本質 1〜3個</b>まで削る　③ 完成したら保存して、同じ問題を<b>翌日もう一度</b>通す（原則5：反復で精度が上がる）</p>
+  </div>
+
+  <!-- STEP 0: 問題提起 -->
+  <div class="card active" id="card-0">
+    <div class="step-head">
+      <div class="step-num">0</div>
+      <div>
+        <div class="step-title">いま向き合っている「難しい問題」を1文で書く</div>
+        <div class="step-hint">まだ整理されていなくて良い。ただし必ず1文で。</div>
+      </div>
+    </div>
+    <textarea id="problem" rows="2" placeholder="例：エンジニア組織の採用が進まない理由を特定して来月の施策を決める"></textarea>
+  </div>
+
+  <!-- STEP 1: 本質と余分 -->
+  <div class="card" id="card-1">
+    <div class="step-head">
+      <div class="step-num">1</div>
+      <div>
+        <div class="step-title">本質と余分を分ける <span class="principle-tag">原則1</span></div>
+        <div class="step-hint">問題に絡む要素を全部書き出し、1つずつ「本質」か「余分」かに振る。</div>
+      </div>
+    </div>
+    <div class="quote">「単純化は捨てることではない。余分を取り除いて<b>判断できる状態</b>を作ることだ」</div>
+    <label>要素を1つ書いてEnter（登録される）</label>
+    <input type="text" id="factor-input" placeholder="例：給与水準、募集チャネル、面接体験、候補者母数、会社の知名度...">
+    <div style="margin-top:14px" class="two-col">
+      <div>
+        <label style="color:var(--accent)">✓ 本質（最大3つまで推奨）</label>
+        <div class="chip-list" id="essential-list"></div>
+      </div>
+      <div>
+        <label style="color:var(--warn)">× 余分（今回は扱わない）</label>
+        <div class="chip-list" id="extra-list"></div>
+      </div>
+    </div>
+    <label style="margin-top:16px">未分類（クリックで振り分け）</label>
+    <div class="chip-list" id="pending-list"></div>
+  </div>
+
+  <!-- STEP 2: 順番 -->
+  <div class="card" id="card-2">
+    <div class="step-head">
+      <div class="step-num">2</div>
+      <div>
+        <div class="step-title">扱う順番を決める <span class="principle-tag">原則2</span></div>
+        <div class="step-hint">本質に残した要素を、取り組む順番で並べ替える。ドラッグで入れ替え。</div>
+      </div>
+    </div>
+    <div class="quote">「速さより順番が判断の質を決める」</div>
+    <ul class="sort-list" id="sort-list"></ul>
+    <p style="font-size:12px;color:var(--sub);margin-top:8px">本質が空なら、ステップ1で「本質」に最低1つ振り分けてください。</p>
+  </div>
+
+  <!-- STEP 3: 抽象と具体 -->
+  <div class="card" id="card-3">
+    <div class="step-head">
+      <div class="step-num">3</div>
+      <div>
+        <div class="step-title">抽象で考え、具体で確かめる <span class="principle-tag">原則3</span></div>
+        <div class="step-hint">本質を抽象的な「型」で言い直し、それを裏付ける/崩す具体例を1つ出す。</div>
+      </div>
+    </div>
+    <div class="quote">「抽象モデルで考え、現実のサンプルで検証する」</div>
+    <label>抽象（パターン・構造・一般則として）</label>
+    <textarea id="abstract" rows="2" placeholder="例：候補者は『給与』より『成長環境が見える情報密度』で意思決定している"></textarea>
+    <label>具体1（最近あった実例・数字・ケース）</label>
+    <textarea id="concrete1" rows="2" placeholder="例：先月の内定辞退3名のうち2名が『技術ブログを読んで応募したが面接で温度差を感じた』と回答"></textarea>
+    <label>具体2（反例・違和感のあるケース）</label>
+    <textarea id="concrete2" rows="2" placeholder="例：給与据え置きでも入社した1名は CTO と直接話した体験を決め手にしていた"></textarea>
+  </div>
+
+  <!-- STEP 4: 問いの範囲 -->
+  <div class="card" id="card-4">
+    <div class="step-head">
+      <div class="step-num">4</div>
+      <div>
+        <div class="step-title">問いの範囲を決める <span class="principle-tag">原則4</span></div>
+        <div class="step-hint">「何を、いつまでに、どの状態にするか」を1文で限定する。広いと思考は動かない。</div>
+      </div>
+    </div>
+    <div class="quote">「問いの範囲を決めると思考は動き出す」</div>
+    <div class="two-col">
+      <div>
+        <label>何を</label>
+        <input type="text" id="scope-what" placeholder="候補者体験">
+      </div>
+      <div>
+        <label>どの状態に</label>
+        <input type="text" id="scope-state" placeholder="応募→内定 60% 以上">
+      </div>
+    </div>
+    <div class="two-col" style="margin-top:0">
+      <div>
+        <label>いつまでに</label>
+        <input type="text" id="scope-when" placeholder="6/30">
+      </div>
+      <div>
+        <label>扱わない範囲（あえて）</label>
+        <input type="text" id="scope-not" placeholder="給与改定は今回扱わない">
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5: 構造 -->
+  <div class="card" id="card-5">
+    <div class="step-head">
+      <div class="step-num">5</div>
+      <div>
+        <div class="step-title">構造を見る <span class="principle-tag">原則6</span></div>
+        <div class="step-hint">本質要素どうしの関係（原因→結果、前提→結論など）を2〜4本だけ書く。</div>
+      </div>
+    </div>
+    <div class="quote">「情報を増やすより構造を見る方が判断は速い」</div>
+    <div class="structure-box" id="relations-box"></div>
+    <button class="ghost" id="add-rel" style="margin-top:10px">＋ 関係を1本追加</button>
+  </div>
+
+  <!-- STEP 6: 反復 -->
+  <div class="card" id="card-6">
+    <div class="step-head">
+      <div class="step-num">6</div>
+      <div>
+        <div class="step-title">反復メモ <span class="principle-tag">原則5</span></div>
+        <div class="step-hint">翌日/翌週にもう一度このシートを通したとき「前と何が変わったか」を書く。</div>
+      </div>
+    </div>
+    <div class="quote">「単純化は繰り返すたびに精度が上がる。最初の答えは仮説でいい」</div>
+    <label>今回のラウンド</label>
+    <div><span class="round-badge" id="round-badge">Round 1</span></div>
+    <label style="margin-top:12px">前回から何を変えたか（Round 2以降）</label>
+    <textarea id="diff-note" rows="2" placeholder="例：本質に『面接体験』を追加、『給与水準』を余分に移した。理由：辞退者インタビューで体験要因が7割だったため"></textarea>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="card summary-card">
+    <h2>単純化された問い（判断できる形）</h2>
+    <div class="sentence" id="summary-sentence">まずステップ0〜4を埋めてください</div>
+    <div class="action-row" style="margin-top:16px">
+      <button class="ghost" style="border-color:rgba(255,255,255,.4);color:#fff" id="reset-btn">新しい問題で始める</button>
+      <button class="primary" style="background:#fff;color:var(--brand)" id="save-btn">この単純化を保存（習慣になる）</button>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="history">
+    <h3>過去のセッション <span style="font-weight:normal;text-transform:none">— 原則7：単純化は知識ではなく判断の<b>習慣</b>だ</span></h3>
+    <div id="history-list"></div>
+  </div>
+
+</div>
+
+<script>
+const STORAGE_KEY = 'neumann_mode_v1';
+const state = {
+  problem: '',
+  factors: [],         // {id, text, status: 'pending'|'essential'|'extra'}
+  order: [],           // factor ids (essential のみ)
+  abstract: '',
+  concrete1: '',
+  concrete2: '',
+  scope: { what: '', state: '', when: '', not: '' },
+  relations: [],       // {from, type, to}
+  round: 1,
+  diffNote: '',
+};
+
+function load() {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return { current: null, history: [] };
+  try { return JSON.parse(raw); } catch { return { current: null, history: [] }; }
+}
+function saveStore(store) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
+}
+
+let store = load();
+if (store.current) Object.assign(state, store.current);
+
+// ============ RENDER ============
+function $(id){ return document.getElementById(id); }
+
+function render() {
+  $('problem').value = state.problem;
+  renderFactors();
+  renderSort();
+  $('abstract').value = state.abstract;
+  $('concrete1').value = state.concrete1;
+  $('concrete2').value = state.concrete2;
+  $('scope-what').value = state.scope.what;
+  $('scope-state').value = state.scope.state;
+  $('scope-when').value = state.scope.when;
+  $('scope-not').value = state.scope.not;
+  renderRelations();
+  $('round-badge').textContent = 'Round ' + state.round;
+  $('diff-note').value = state.diffNote;
+  renderSummary();
+  renderHistory();
+  renderStats();
+  renderActiveCard();
+}
+
+function renderFactors() {
+  const pending = state.factors.filter(f=>f.status==='pending');
+  const ess = state.factors.filter(f=>f.status==='essential');
+  const ext = state.factors.filter(f=>f.status==='extra');
+
+  $('pending-list').innerHTML = pending.map(f=>
+    `<span class="chip" data-id="${f.id}" style="cursor:pointer" title="クリックで本質へ / 右クリックで余分へ">${escape(f.text)} <button onclick="removeFactor(${f.id})">×</button></span>`
+  ).join('') || '<span style="font-size:12px;color:var(--sub)">上の入力欄で要素を追加</span>';
+
+  $('essential-list').innerHTML = ess.map(f=>
+    `<span class="chip essential" data-id="${f.id}">${escape(f.text)} <button onclick="moveFactor(${f.id},'pending')">↩</button></span>`
+  ).join('') || '<span style="font-size:12px;color:var(--sub)">未分類をクリックで追加</span>';
+
+  $('extra-list').innerHTML = ext.map(f=>
+    `<span class="chip extra" data-id="${f.id}">${escape(f.text)} <button onclick="moveFactor(${f.id},'pending')">↩</button></span>`
+  ).join('') || '<span style="font-size:12px;color:var(--sub)">余分に分類したものがここへ</span>';
+
+  document.querySelectorAll('#pending-list .chip').forEach(chip=>{
+    const id = Number(chip.dataset.id);
+    chip.addEventListener('click', e => {
+      if (e.target.tagName === 'BUTTON') return;
+      moveFactor(id, 'essential');
+    });
+    chip.addEventListener('contextmenu', e=>{
+      e.preventDefault();
+      moveFactor(id, 'extra');
+    });
+  });
+}
+
+function renderSort() {
+  const ess = state.order
+    .map(id => state.factors.find(f=>f.id===id))
+    .filter(Boolean)
+    .filter(f => f.status === 'essential');
+  const ul = $('sort-list');
+  ul.innerHTML = ess.map((f,i)=>
+    `<li draggable="true" data-id="${f.id}">
+      <span class="rank">${i+1}</span>
+      <span>${escape(f.text)}</span>
+      <span class="handle">⋮⋮</span>
+    </li>`
+  ).join('');
+
+  let dragId = null;
+  ul.querySelectorAll('li').forEach(li => {
+    li.addEventListener('dragstart', e => { dragId = Number(li.dataset.id); li.style.opacity='.4'; });
+    li.addEventListener('dragend', e => { li.style.opacity='1'; });
+    li.addEventListener('dragover', e => { e.preventDefault(); });
+    li.addEventListener('drop', e => {
+      e.preventDefault();
+      const targetId = Number(li.dataset.id);
+      if (dragId === null || dragId === targetId) return;
+      const from = state.order.indexOf(dragId);
+      const to = state.order.indexOf(targetId);
+      state.order.splice(from, 1);
+      state.order.splice(to, 0, dragId);
+      render();
+      autosave();
+    });
+  });
+}
+
+function renderRelations() {
+  const ess = state.factors.filter(f=>f.status==='essential');
+  const box = $('relations-box');
+  if (state.relations.length === 0) {
+    box.innerHTML = '<span style="font-size:12px;color:var(--sub)">「＋ 関係を1本追加」で、本質要素どうしの因果を2〜4本だけ書く</span>';
+    return;
+  }
+  box.innerHTML = state.relations.map((r,i) => `
+    <div class="rel-row">
+      <select onchange="updateRel(${i}, 'from', this.value)">
+        <option value="">(要素A)</option>
+        ${ess.map(f=>`<option value="${f.id}" ${r.from==f.id?'selected':''}>${escape(f.text)}</option>`).join('')}
+      </select>
+      <select onchange="updateRel(${i}, 'type', this.value)">
+        <option ${r.type==='→'?'selected':''}>→</option>
+        <option ${r.type==='⇄'?'selected':''}>⇄</option>
+        <option ${r.type==='⊂'?'selected':''}>⊂</option>
+        <option ${r.type==='↔'?'selected':''}>↔</option>
+      </select>
+      <select onchange="updateRel(${i}, 'to', this.value)">
+        <option value="">(要素B)</option>
+        ${ess.map(f=>`<option value="${f.id}" ${r.to==f.id?'selected':''}>${escape(f.text)}</option>`).join('')}
+      </select>
+      <button onclick="removeRel(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function renderSummary() {
+  const s = state.scope;
+  const topOrder = state.order.slice(0,3).map(id=>{
+    const f = state.factors.find(x=>x.id===id);
+    return f ? f.text : '';
+  }).filter(Boolean);
+  if (!state.problem || !s.what || !s.state) {
+    $('summary-sentence').textContent = 'まずステップ0〜4を埋めてください';
+    return;
+  }
+  const sentence =
+    `『${s.what}』を『${s.state}』にする` +
+    (s.when ? `（${s.when}まで）` : '') +
+    `。扱うのは${topOrder.length ? topOrder.join(' → ') : '(本質未設定)'}のみ。` +
+    (s.not ? ` ${s.not}は今回扱わない。` : '');
+  $('summary-sentence').textContent = sentence;
+}
+
+function renderHistory() {
+  const list = $('history-list');
+  if (!store.history || store.history.length === 0) {
+    list.innerHTML = '<div style="font-size:13px;color:var(--sub);padding:8px">まだ保存されたセッションはありません</div>';
+    return;
+  }
+  list.innerHTML = store.history.slice().reverse().map((h, idx) => {
+    const realIdx = store.history.length - 1 - idx;
+    return `<div class="history-item" onclick="loadHistory(${realIdx})">
+      <div class="hist-problem">${escape(h.problem || '(無題)')}</div>
+      <div class="hist-meta">${h.date} / R${h.round} / 本質${h.essentialCount}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderStats() {
+  const hist = store.history || [];
+  $('total-count').textContent = hist.length;
+  const now = new Date();
+  const monthKey = now.getFullYear()+'-'+(now.getMonth()+1);
+  const monthly = hist.filter(h => h.monthKey === monthKey).length;
+  $('month-count').textContent = monthly;
+}
+
+function renderActiveCard() {
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(c => { c.classList.remove('active'); c.classList.remove('done'); });
+  let active = 0;
+  if (state.problem) { markDone(0); active = 1; }
+  if (state.factors.some(f=>f.status==='essential')) { markDone(1); active = 2; }
+  if (state.order.length > 0) { markDone(2); active = 3; }
+  if (state.abstract && state.concrete1) { markDone(3); active = 4; }
+  if (state.scope.what && state.scope.state) { markDone(4); active = 5; }
+  if (state.relations.length > 0) { markDone(5); active = 6; }
+  const target = document.getElementById('card-'+active);
+  if (target) target.classList.add('active');
+}
+function markDone(n) { const c = document.getElementById('card-'+n); if (c) c.classList.add('done'); }
+
+function escape(str) { return String(str).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ============ ACTIONS ============
+let nextId = Math.max(0, ...state.factors.map(f=>f.id)) + 1;
+
+function addFactor(text) {
+  if (!text.trim()) return;
+  state.factors.push({ id: nextId++, text: text.trim(), status: 'pending' });
+  autosave();
+  render();
+}
+function moveFactor(id, status) {
+  const f = state.factors.find(x=>x.id===id);
+  if (!f) return;
+  f.status = status;
+  if (status === 'essential' && !state.order.includes(id)) state.order.push(id);
+  if (status !== 'essential') state.order = state.order.filter(x=>x!==id);
+  autosave();
+  render();
+}
+function removeFactor(id) {
+  state.factors = state.factors.filter(f=>f.id!==id);
+  state.order = state.order.filter(x=>x!==id);
+  state.relations = state.relations.filter(r => r.from != id && r.to != id);
+  autosave();
+  render();
+}
+window.moveFactor = moveFactor;
+window.removeFactor = removeFactor;
+
+function updateRel(i, key, val) {
+  state.relations[i][key] = val;
+  autosave();
+  renderSummary();
+}
+function removeRel(i) {
+  state.relations.splice(i, 1);
+  autosave();
+  render();
+}
+window.updateRel = updateRel;
+window.removeRel = removeRel;
+
+$('add-rel').addEventListener('click', () => {
+  state.relations.push({ from: '', type: '→', to: '' });
+  autosave();
+  render();
+});
+
+$('factor-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    addFactor(e.target.value);
+    e.target.value = '';
+  }
+});
+
+['problem','abstract','concrete1','concrete2','diff-note'].forEach(id => {
+  $(id).addEventListener('input', e => {
+    const key = id === 'diff-note' ? 'diffNote' : id;
+    state[key] = e.target.value;
+    autosave();
+    renderSummary();
+    renderActiveCard();
+  });
+});
+['scope-what','scope-state','scope-when','scope-not'].forEach(id => {
+  const key = id.replace('scope-','');
+  $(id).addEventListener('input', e => {
+    state.scope[key] = e.target.value;
+    autosave();
+    renderSummary();
+    renderActiveCard();
+  });
+});
+
+$('save-btn').addEventListener('click', () => {
+  if (!state.problem) { alert('ステップ0の問題文を書いてください'); return; }
+  const snap = JSON.parse(JSON.stringify(state));
+  const now = new Date();
+  snap.date = now.toISOString().slice(0,10);
+  snap.monthKey = now.getFullYear()+'-'+(now.getMonth()+1);
+  snap.essentialCount = state.factors.filter(f=>f.status==='essential').length;
+  store.history = store.history || [];
+  store.history.push(snap);
+  saveStore(store);
+  alert('保存しました。数日後にもう一度同じ問題を通すと、原則5の反復効果が効きます。');
+  render();
+});
+
+$('reset-btn').addEventListener('click', () => {
+  if (!confirm('現在のセッションを破棄して新しい問題で始めますか？（履歴は残ります）')) return;
+  Object.assign(state, {
+    problem: '', factors: [], order: [],
+    abstract: '', concrete1: '', concrete2: '',
+    scope: { what:'', state:'', when:'', not:'' },
+    relations: [], round: 1, diffNote: ''
+  });
+  nextId = 1;
+  autosave();
+  render();
+});
+
+window.loadHistory = function(idx) {
+  const h = store.history[idx];
+  if (!h) return;
+  if (!confirm('このセッションを再編集します（現在の入力は上書きされます）。\nRound ' + (h.round + 1) + ' として続けますか？')) return;
+  Object.assign(state, h);
+  state.round = (h.round || 1) + 1;
+  state.diffNote = '';
+  nextId = Math.max(0, ...state.factors.map(f=>f.id)) + 1;
+  autosave();
+  render();
+};
+
+function autosave() {
+  store.current = state;
+  saveStore(store);
+}
+
+render();
+</script>
+
+</body>
+</html>
